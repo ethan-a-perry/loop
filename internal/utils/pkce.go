@@ -1,4 +1,4 @@
-package auth
+package utils
 
 import (
 	"encoding/base64"
@@ -8,9 +8,9 @@ import (
 
 const pkceCharset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
 
-func GenerateCodeVerifier() (string, error) {
+func GenerateCodeVerifier(length int) (string, error) {
 	// Create code verifier
-	buf := make([]byte, 64)
+	buf := make([]byte, length)
 
 	_, err := rand.Read(buf)
 	if err != nil {

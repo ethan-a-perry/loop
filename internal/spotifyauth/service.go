@@ -1,4 +1,4 @@
-package auth
+package spotifyauth
 
 import (
 	"encoding/json"
@@ -7,12 +7,23 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/ethan-a-perry/song-loop/config"
+	"github.com/ethan-a-perry/song-loop/internal/database/data"
+	"github.com/ethan-a-perry/song-loop/internal/utils"
 )
+
+type Service interface {
+	Authenticate() (*Token, bool, error)
+	EstablishToken(code string) error
+	GetAuthorizationUrl() (string, error)
+}
+
+type svc struct {
+	userData *data.UserData
+}
 
 var (
 	session *config.Config
@@ -27,27 +38,29 @@ type Token struct {
 	RefreshToken string
 }
 
-func InitSpotify() error {
+func NewService(userData *data.UserData) Service {
 	var err error
 	session, err = config.LoadConfig()
 
 	if err != nil {
-		return fmt.Errorf("Failed to load config: %w", err)
+		fmt.Errorf("Failed to load config: %w", err)
 	}
 
-	return nil
+	return &svc {
+		userData: userData,
+	}
 }
 
-func GetAuthorizationUrl() (string, error) {
+func (s *svc) GetAuthorizationUrl() (string, error) {
 	var err error
-	codeVerifier, err = GenerateCodeVerifier()
+	codeVerifier, err = utils.GenerateCodeVerifier(64)
 	if err != nil {
 		return "", errors.New("Could not generate code verifier")
 	}
 
-	codeChallenge := GenerateCodeChallenge(codeVerifier)
+	codeChallenge := utils.GenerateCodeChallenge(codeVerifier)
 
-	state, err := GenerateCodeVerifier()
+	state, err := utils.GenerateCodeVerifier(64)
 	if err != nil {
 		return "", errors.New("Could not generate state")
 	}
@@ -64,7 +77,27 @@ func GetAuthorizationUrl() (string, error) {
 	return fmt.Sprintf("https://accounts.spotify.com/authorize?%s", v.Encode()), nil
 }
 
-func GetToken(data url.Values) error {
+func (s *svc) EstablishToken(code string) error {
+	data := url.Values{}
+	data.Set("grant_type", "authorization_code")
+	data.Set("code", code)
+	data.Set("redirect_uri", session.RedirectURI)
+	data.Set("client_id", session.ClientID)
+	data.Set("code_verifier", codeVerifier)
+
+	return s.GetToken(data)
+}
+
+func (s *svc) RefreshToken(refreshToken string) error {
+	data := url.Values{}
+	data.Set("grant_type", "refresh_token")
+	data.Set("refresh_token", refreshToken)
+	data.Set("client_id", session.ClientID)
+
+	return s.GetToken(data)
+}
+
+func (s *svc) GetToken(data url.Values) error {
 	req, err := http.NewRequest(http.MethodPost, "https://accounts.spotify.com/api/token", strings.NewReader(data.Encode()))
 
 	if err != nil {
@@ -108,71 +141,40 @@ func GetToken(data url.Values) error {
 		RefreshToken: tr.RefreshToken,
 	}
 
-	if err := SaveToken(&token); err != nil {
+	if err := s.SaveToken(&token); err != nil {
         return fmt.Errorf("Failed to save token: %w", err)
     }
 
 	return nil
 }
 
-func EstablishToken(code string) error {
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("code", code)
-	data.Set("redirect_uri", session.RedirectURI)
-	data.Set("client_id", session.ClientID)
-	data.Set("code_verifier", codeVerifier)
-
-	return GetToken(data)
-}
-
-func RefreshToken(refreshToken string) error {
-	data := url.Values{}
-	data.Set("grant_type", "refresh_token")
-	data.Set("refresh_token", refreshToken)
-	data.Set("client_id", session.ClientID)
-
-	return GetToken(data)
-}
-
-func LoadToken() (*Token, error) {
-	data, err := os.ReadFile("internal/auth/token.json")
+func (s *svc) LoadToken() (*Token, error) {
+	token, err := s.userData.GetSpotifyToken()
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to read token file: %w", err)
+		return nil, fmt.Errorf("Failed to get spotify token from database: %w", err)
 	}
 
-	var t Token
-	if err := json.Unmarshal(data, &t); err != nil {
-		return nil, fmt.Errorf("Failed to parse token file: %w", err)
-	}
-
-	return &t, nil
+	return &token, nil
 }
 
-func SaveToken(t *Token) error {
-	data, err := json.MarshalIndent(t, "", "  ")
-
-	if err != nil {
-		return fmt.Errorf("Failed to marshal token file to JSON: %w", err)
-	}
-
-	if err := os.WriteFile("internal/auth/token.json", data, 0600); err != nil {
-        return fmt.Errorf("Failed to write token file: %w", err)
+func (s *svc) SaveToken(t *Token) error {
+	if err := s.userData.UpdateSpotifyToken(&t); err != nil {
+        return fmt.Errorf("Failed to save token: %w", err)
     }
 
     return nil
 }
 
-func Authenticate() (*Token, bool, error) {
-	t, err := LoadToken()
+func (s *svc) Authenticate() (*Token, bool, error) {
+	t, err := s.LoadToken()
 
 	if err != nil {
 		return t, false, nil
 	}
 
 	if time.Now().After(t.ExpiresAt) {
-		err := RefreshToken(t.RefreshToken)
+		err := s.RefreshToken(t.RefreshToken)
 
 		if err != nil {
 			return t, false, fmt.Errorf("Failed to refresh token: %w", err)
