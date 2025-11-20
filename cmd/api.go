@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethan-a-perry/song-loop/internal/spotify"
 	"github.com/ethan-a-perry/song-loop/internal/spotifyauth"
+	"github.com/ethan-a-perry/song-loop/internal/store"
 )
 
 type api struct {
@@ -18,18 +20,21 @@ type config struct {
 func (a *api) mount() http.Handler {
 	router := http.NewServeMux()
 
-	// Spotify Auth
-	spotifyAuthService := spotifyauth.NewService()
-	spotifyAuthHandler := spotifyauth.NewHandler(spotifyAuthService)
+	store := store.NewStore()
 
-	router.HandleFunc("/api/spotify/connect", spotifyAuthHandler.Connect)
-	router.HandleFunc("/api/spotify/callback", spotifyAuthHandler.Callback)
+	// Auth
+	authService := spotifyauth.NewService(store)
+	authHandler := spotifyauth.NewHandler(*authService)
 
-	// Spotify
-	// spotifyService := spotify.NewService()
-	// spotifyHandler := spotify.NewHandler(spotifyService)
+	router.HandleFunc("/api/spotify/connect", authHandler.Callback)
+	router.HandleFunc("/api/spotify/callback", authHandler.Callback)
 
-	// router.HandleFunc("/loop", spotifyHandler.Loop)
+	// Loop
+	spotifyService := spotify.NewService(authService)
+	spotifyHandler := spotify.NewHandler(*spotifyService)
+
+	router.HandleFunc("/api/spotify/loop", spotifyHandler.Loop)
+	router.HandleFunc("/api/spotify/loop/stop", spotifyHandler.StopLoop)
 
 	return router
 }

@@ -1,4 +1,4 @@
-package spotifyauth
+package utils
 
 import (
 	"encoding/base64"
