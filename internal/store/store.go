@@ -19,12 +19,14 @@ type Store struct {
 	token SpotifyToken
 }
 
+var filepath = "internal/store/token.json"
+
 func NewStore() *Store {
 	return &Store{}
 }
 
 func(s *Store) Load() (*SpotifyToken, error) {
-	data, err := os.ReadFile("token.json")
+	data, err := os.ReadFile(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read token file: %w", err)
 	}
@@ -44,7 +46,7 @@ func (s *Store) Save(token *SpotifyToken) error {
 		return fmt.Errorf("failed to marshal token data: %w", err)
 	}
 
-	if err := os.WriteFile("token.json", data, 0644); err != nil {
+	if err := os.WriteFile(filepath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write token file: %w", err)
 	}
 
