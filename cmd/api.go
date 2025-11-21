@@ -26,7 +26,7 @@ func (a *api) mount() http.Handler {
 	authService := spotifyauth.NewService(store)
 	authHandler := spotifyauth.NewHandler(*authService)
 
-	router.HandleFunc("/api/spotify/connect", authHandler.Callback)
+	router.HandleFunc("/api/spotify/connect", authHandler.Connect)
 	router.HandleFunc("/api/spotify/callback", authHandler.Callback)
 
 	// Loop

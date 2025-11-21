@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 )
 
@@ -40,5 +41,9 @@ func (h *handler) Loop(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) StopLoop(w http.ResponseWriter, r *http.Request) {
-
+	if h.service.stop != nil {
+		close(h.service.stop)
+	} else {
+		fmt.Println("Loop is not running")
+	}
 }
