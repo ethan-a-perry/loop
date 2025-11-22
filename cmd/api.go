@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 
 	"github.com/ethan-a-perry/song-loop/internal/spotify"
@@ -33,8 +34,15 @@ func (a *api) mount() http.Handler {
 	spotifyService := spotify.NewService(authService)
 	spotifyHandler := spotify.NewHandler(*spotifyService)
 
-	router.HandleFunc("/api/spotify/loop", spotifyHandler.Loop)
+	router.HandleFunc("POST /api/spotify/loop", spotifyHandler.Loop)
 	router.HandleFunc("/api/spotify/loop/stop", spotifyHandler.StopLoop)
+
+	// App
+	tmpl := template.Must(template.ParseFiles("templates/index.html"))
+	router.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		tmpl.Execute(w, nil)
+	})
 
 	return router
 }

@@ -1,3 +1,5 @@
 notes.txt
 token.json
 .air.toml
+.env
+tmp/
