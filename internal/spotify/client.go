@@ -7,13 +7,29 @@ import (
 )
 
 type PlaybackState struct {
-	Item struct {
-		ID string `json:"id"`
-	} `json:"item"`
-	IsPlaying bool `json:"is_playing"`
 	Device struct {
 		IsActive bool `json:"is_active"`
 	} `json:"device"`
+
+	IsPlaying bool `json:"is_playing"`
+
+	Item struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+
+		Album struct {
+			Name string `json:"name"`
+			Images []struct {
+				URL    string `json:"url"`
+				Height int    `json:"height"`
+				Width  int    `json:"width"`
+			} `json:"images"`
+		} `json:"album"`
+
+		Artists []struct {
+			Name string `json:"name"`
+		} `json:"artists"`
+	} `json:"item"`
 }
 
 func GetPlaybackState(accessToken string) (*PlaybackState, error) {
@@ -43,8 +59,6 @@ func GetPlaybackState(accessToken string) (*PlaybackState, error) {
 	if err := json.NewDecoder(res.Body).Decode(&playbackState); err != nil {
 		return nil, fmt.Errorf("failed to decode JSON response body: %w", err)
 	}
-
-	fmt.Println(playbackState)
 
 	return &playbackState, nil
 }

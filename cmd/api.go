@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"net/http"
 
 	"github.com/ethan-a-perry/song-loop/internal/spotify"
@@ -12,6 +11,9 @@ import (
 
 type api struct {
 	config config
+	store *store.Store
+	authService *spotifyauth.Service
+    spotifyService *spotify.Service
 }
 
 type config struct {
@@ -21,28 +23,15 @@ type config struct {
 func (a *api) mount() http.Handler {
 	router := http.NewServeMux()
 
-	store := store.NewStore()
-
 	// Auth
-	authService := spotifyauth.NewService(store)
-	authHandler := spotifyauth.NewHandler(*authService)
-
+	authHandler := spotifyauth.NewHandler(a.authService)
 	router.HandleFunc("/api/spotify/connect", authHandler.Connect)
 	router.HandleFunc("/api/spotify/callback", authHandler.Callback)
 
 	// Loop
-	spotifyService := spotify.NewService(authService)
-	spotifyHandler := spotify.NewHandler(*spotifyService)
-
+	spotifyHandler := spotify.NewHandler(a.spotifyService)
 	router.HandleFunc("POST /api/spotify/loop", spotifyHandler.Loop)
 	router.HandleFunc("/api/spotify/loop/stop", spotifyHandler.StopLoop)
-
-	// App
-	tmpl := template.Must(template.ParseFiles("templates/index.html"))
-	router.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		tmpl.Execute(w, nil)
-	})
 
 	return router
 }

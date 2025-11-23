@@ -2,15 +2,14 @@ package spotify
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 )
 
 type handler struct {
-	service Service
+	service *Service
 }
 
-func NewHandler(service Service) *handler {
+func NewHandler(service *Service) *handler {
 	return &handler {
 		service: service,
 	}
@@ -29,7 +28,7 @@ func (h *handler) Loop(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Loop(req.Start, req.End); err != nil {
+	if err := h.service.StartLoop(req.Start, req.End); err != nil {
 		http.Error(w, "Authorization required. Please authenticate with Spotify.", http.StatusUnauthorized)
 		return
 	}
@@ -41,9 +40,19 @@ func (h *handler) Loop(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) StopLoop(w http.ResponseWriter, r *http.Request) {
-	if h.service.stop != nil {
-		close(h.service.stop)
-	} else {
-		fmt.Println("Loop is not running")
+	w.Header().Set("Content-Type", "application/json")
+
+	if err := h.service.StopLoop(); err != nil {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"status": "failed to stop loop",
+		})
+
+		return
 	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status": "ok",
+	})
 }

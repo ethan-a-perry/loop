@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethan-a-perry/song-loop/internal/spotifyauth"
@@ -9,8 +10,8 @@ import (
 
 type Service struct {
 	auth *spotifyauth.Service
+	isLoopActive atomic.Bool
 	stop chan struct{}
-	loopActive bool
 }
 
 func NewService(auth *spotifyauth.Service) *Service {
@@ -20,74 +21,120 @@ func NewService(auth *spotifyauth.Service) *Service {
 	}
 }
 
-func (s *Service) Loop(start, end int) error {
-	if s.loopActive {
+func (s *Service) StartLoop(start, end int) error {
+	// Wait for previous loop to stop
+	if s.IsLoopActive() {
+		s.StopLoop()
+
+		timeout := time.After(5 * time.Second)
+		ticker := time.NewTicker(50 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+				case <-ticker.C:
+					if !s.IsLoopActive() {
+						goto done
+					}
+				case <-timeout:
+					return fmt.Errorf("timeout waiting for the preexisting loop to stop")
+			}
+		}
+		done:
+	}
+
+	s.setLoopActive()
+	s.stop = make(chan struct{})
+
+	go s.runLoop(start, end)
+
+	return nil
+}
+
+func (s *Service) StopLoop() error {
+	if !s.IsLoopActive() {
+		return fmt.Errorf("Loop is not running")
+	}
+
+	if s.stop != nil {
 		close(s.stop)
 	}
 
-	token, err := s.auth.GetValidToken()
-	if err != nil || token == nil {
-		return fmt.Errorf("failed to get valid token")
-	}
+	return nil
+}
 
-	s.stop = make(chan struct{})
-	s.loopActive = true
+func (s *Service) IsLoopActive() bool {
+	return s.isLoopActive.Load()
+}
 
-	state, err := GetPlaybackState(token.AccessToken)
+func (s *Service) CheckPlaybackState(accessToken, currentTrackID string) bool {
+	playbackState, err := GetPlaybackState(accessToken)
 	if err != nil {
-	    return fmt.Errorf("failed to get playback state: %w", err)
+		fmt.Println("failed to get playback state")
+		return false
 	}
 
-	currentTrackID := state.Item.ID
+	if !playbackState.Device.IsActive || !playbackState.IsPlaying {
+		fmt.Println("playback not active, stopping loop")
+		return false
+	}
 
-	go func() {
-		defer func() {
-			s.loopActive = false
-		}()
+	if currentTrackID != playbackState.Item.ID {
+		fmt.Println("a new track was selected, stopping loop")
+		return false
+	}
 
-		for {
-			if currentTrackID != "" {
-				playbackState, err := GetPlaybackState(token.AccessToken)
-				if err != nil {
-					fmt.Println("failed to get playback state")
-					return
-				}
+	return true
+}
 
-				if !playbackState.Device.IsActive || !playbackState.IsPlaying {
-					fmt.Println("playback not active, stopping loop")
-					return
-				}
+func (s *Service) runLoop(start, end int) {
+	defer s.setLoopInactive()
 
-				if currentTrackID != playbackState.Item.ID {
-					fmt.Println("a new track was selected, stopping loop")
-					return
-				}
-			}
+	duration := time.Duration(end - start) * time.Millisecond
+	ticker := time.NewTicker(duration)
+	defer ticker.Stop()
 
-			if err := Seek(start, token.AccessToken); err != nil {
-				fmt.Println("seek operation failed")
+	firstIteration := true
+	currentTrackID := ""
+
+	for {
+		token, err := s.auth.GetValidToken()
+		if err != nil {
+			fmt.Println("failed to get valid token")
+			return
+		}
+
+		if firstIteration {
+			playbackState, err := GetPlaybackState(token.AccessToken)
+			if err != nil {
+				fmt.Println("failed to get playback state")
 				return
 			}
+			currentTrackID = playbackState.Item.ID
 
-			duration := time.Duration(end - start) * time.Millisecond
-			endTime := time.Now().Add(duration)
-
-			ticker := time.NewTicker(500 * time.Millisecond)
-
-			for time.Now().Before(endTime) {
-				select {
-					case <-ticker.C:
-					case <-s.stop:
-						ticker.Stop()
-						fmt.Println("loop stopped")
-						s.stop = nil
-						return
-				}
-			}
-
-			ticker.Stop()
+			firstIteration = false
+		} else if s.CheckPlaybackState(token.AccessToken, currentTrackID) == false {
+			return
 		}
-	}()
 
-	return nil
+		if err := Seek(start, token.AccessToken); err != nil {
+			fmt.Println("seek operation failed")
+			return
+		}
+
+		select {
+			case <-ticker.C:
+				continue
+			case <-s.stop:
+				return
+		}
+	}
+}
+
+func (s *Service) setLoopActive() {
+	s.isLoopActive.Store(true)
+}
+
+func (s *Service) setLoopInactive() {
+	s.isLoopActive.Store(false)
 }
