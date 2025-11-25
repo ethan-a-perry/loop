@@ -13,8 +13,8 @@
 			<p>Loop your favorite section of any track on Spotify</p>
 		</div>
 
-		<span class="status {{ .Status }}">
-			{{ .StatusDescription }}
+		<span id="status" class="status {{ .Status }}">
+			<span id="status-description">{{ .StatusDescription }}</span>
 			<a href="/" class="refresh">
 				<svg style="width: 24px; height: 24px;">
             		<use href="../web/static/icons/icons.svg#restart-alt"></use>
@@ -53,23 +53,24 @@
 				</div>
 
 				<div>
-					<div id="form-status"></div>
-					<p>Set loop:</p>
 					<form id="loop-form">
-						<div class="form-group">
-							<label for="start">Start</label>
-							<input type="number" id="start" name="start" value="8000" required>
+						<span class="slider-display" id="start-display">00:05</span>
+						<span class="slider-display" id="end-display">00:30</span>
+
+						<div class="slider">
+							<span class="track"></span>
+							<span class="track-highlight"></span>
+							<input id="start-slider" type="range" name="start" value="5" min="0" max="100" step="1" />
+							<input id="end-slider" type="range" name="end" value="30" min="0" max="100" step="1" />
 						</div>
 
-						<div class="form-group">
-							<label for="end">End</label>
-							<input type="number" id="end" name="end" value="12000" required>
+						<div class="form-btns">
+							<button type="submit">Start loop</button>
+							<button id="stop-loop-btn" type="button">Stop loop</button>
 						</div>
-
-						<div class="form-group grid-span">
-				            <button>Submit</button>
-				        </div>
 					</form>
+
+					<div id="form-status"></div>
 				</div>
 			</div>
 		{{ end }}
