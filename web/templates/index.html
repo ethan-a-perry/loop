@@ -6,45 +6,33 @@
 
     <link rel="stylesheet" href="/web/static/css/main.css">
 </head>
-<body class="content-grid">
-	<div class="hero">
-		<div class="flow-1">
+<body>
+
+<main class="content-grid">
+	<section class="loop-header">
+		<div>
 			<h1>Song Loop</h1>
 			<p>Loop your favorite section of any track on Spotify</p>
 		</div>
-
-		<span id="status" class="status {{ .Status }}">
-			<span id="status-description">{{ .StatusDescription }}</span>
-			<a href="/" class="refresh">
-				<svg style="width: 24px; height: 24px;">
-            		<use href="../web/static/icons/icons.svg#restart-alt"></use>
-        		</svg>
+		<div id="status" class="status {{ .Status }}">
+			<a href="/">
+				<svg>
+					<use href="/web/static/icons/icons.svg#restart-alt"></use>
+				</svg>
 			</a>
-		</span>
-	</div>
+			<span id="status-description">{{ .StatusDescription }}</span>
+		</div>
+	</section>
 
-	<div class="dashboard margin-top-4 {{ .Status }}">
-		{{ if eq .Status "unauthorized" }}
-			{{ if ne .StatusMessage "" }}
-				<p>{{ .StatusMessage }}</p>
-			{{ end }}
-			<button id="connect">Connect to Spotify</button>
-		{{ end }}
-
-		{{ if eq .Status "idle" }}
-			<p>To view the dashboard, start playing a Spotify song on any of your devices and refresh the page.</p>
-		{{ end }}
-
-		{{ if .Playback }}
+	{{ if .Playback }}
+		<section class="dashboard track-view margin-top-4">
 			<img
 				src="{{ (index .Playback.Item.Album.Images 0).URL }}"
 				alt="{{ .Playback.Item.Album.Name }}"
 			/>
-
-			<div class="info">
+			<div class="dashboard--info">
 				<div>
-					<h2 class="song">{{ .Playback.Item.Name }}</h2>
-
+					<h2>{{ .Playback.Item.Name }}</h2>
 					<ul class="artists">
 						{{ range .Playback.Item.Artists }}
 							<li>{{ .Name }}</li>
@@ -52,31 +40,45 @@
 					</ul>
 				</div>
 
-				<div>
-					<form id="loop-form">
-						<span class="slider-display" id="start-display">00:05</span>
-						<span class="slider-display" id="end-display">00:30</span>
-
+				<form id="loop-form">
+					<div class="time-range">
+						<span class="fs-s" id="start-display">00:05</span>
 						<div class="slider">
 							<span class="track"></span>
 							<span class="track-highlight"></span>
 							<input id="start-slider" type="range" name="start" value="5" min="0" max="100" step="1" />
 							<input id="end-slider" type="range" name="end" value="30" min="0" max="100" step="1" />
 						</div>
+						<span class="fs-s" id="end-display">00:30</span>
+					</div>
 
-						<div class="form-btns">
-							<button type="submit">Start loop</button>
-							<button id="stop-loop-btn" type="button">Stop loop</button>
-						</div>
-					</form>
-
-					<div id="form-status"></div>
-				</div>
+					<div class="flex-row-1">
+						<button type="submit">Start loop</button>
+						<button id="stop-loop-btn" type="button">Stop loop</button>
+					</div>
+				</form>
 			</div>
-		{{ end }}
-	</div>
+		</section>
+	{{ else }}
+		<section class="dashboard flow-1 margin-top-4">
+			{{ if eq .Status "unauthorized"}}
+				{{ if ne .StatusMessage "" }}
+					<p>{{ .StatusMessage }}</p>
+				{{ end }}
+				<button id="connect">Connect to Spotify</button>
+			{{ end }}
 
-	<script src="/web/static/js/loop.js"></script>
-	<script src="/web/static/js/connect.js"></script>
+			{{ if eq .Status "idle" }}
+				<p>To view the dashboard, start playing a Spotify song on any of your devices and refresh the page.</p>
+			{{ end }}
+		</section>
+	{{ end }}
+
+	<div id="form-status"></div>
+</main>
+
+<script src="/web/static/js/loop.js"></script>
+<script src="/web/static/js/connect.js"></script>
+
 </body>
 </html>

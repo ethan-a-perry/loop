@@ -1,0 +1,21 @@
+/**
+* @license
+*
+* Font Family: Switzer
+* Designed by: Jérémie Hornus
+* URL: https://www.fontshare.com/fonts/switzer
+* © 2025 Indian Type Foundry
+*
+* Switzer Variable (Variable font)
+
+*
+*/
+@font-face {
+  font-family: 'Switzer';
+  src: url('/web/static/fonts/Switzer/Switzer-Variable.woff2') format('woff2'),
+       url('/web/static/fonts/Switzer/Switzer-Variable.woff') format('woff'),
+       url('/web/static/fonts/Switzer/Switzer-Variable.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+  font-style: normal;
+}
