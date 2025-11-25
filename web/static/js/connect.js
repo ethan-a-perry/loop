@@ -1,5 +1,7 @@
-const connectBtn = document.getElementById("connect");
+const connectSpotifyBtn = document.getElementById("connect-spotify");
 
-connectBtn.addEventListener("click", () => {
+if (connectSpotifyBtn) {
+	connectSpotifyBtn.addEventListener("click", () => {
     window.location.href = "/api/spotify/connect";
-});
+	});
+}
