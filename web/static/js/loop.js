@@ -47,7 +47,8 @@ if (stopLoopBtn) {
 			pageStatusDescription.textContent = "Playing";
 		}
 		else {
-			formStatus.textContent = "Apologies, something went wrong when stopping the loop.";
+			formStatus.classList.remove('hidden');
+			formStatus.textContent = "Apologies, something went wrong when stopping the loop. Please refresh the app and try again.";
 		}
 	});
 }
