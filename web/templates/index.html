@@ -10,7 +10,7 @@
 
 <main class="content-grid">
 	<section class="loop-header">
-		<div>
+		<div class="flow-1">
 			<h1>Song Loop</h1>
 			<p>Loop your favorite section of any track on Spotify</p>
 		</div>
@@ -46,8 +46,13 @@
 						<div class="slider">
 							<span class="track"></span>
 							<span class="track-highlight"></span>
-							<input id="start-slider" type="range" name="start" value="{{ div .Playback.Item.DurationMS 10000 }}" min="0" max="{{ div .Playback.Item.DurationMS 1000 }}" step="1" />
-							<input id="end-slider" type="range" name="end" value="{{ div .Playback.Item.DurationMS 2000 }}" min="0" max="{{ div .Playback.Item.DurationMS 1000 }}" step="1" />
+							{{ if or .Loop.Start .Loop.End }}
+								<input id="start-slider" type="range" name="start" value="{{ div .Loop.Start 1000 }}" min="0" max="{{ div .Playback.Item.DurationMS 1000 }}" step="1" />
+								<input id="end-slider" type="range" name="end" value="{{ div .Loop.End 1000 }}" min="0" max="{{ div .Playback.Item.DurationMS 1000 }}" step="1" />
+							{{ else }}
+								<input id="start-slider" type="range" name="start" value="{{ div .Playback.Item.DurationMS 10000 }}" min="0" max="{{ div .Playback.Item.DurationMS 1000 }}" step="1" />
+								<input id="end-slider" type="range" name="end" value="{{ div .Playback.Item.DurationMS 2000 }}" min="0" max="{{ div .Playback.Item.DurationMS 1000 }}" step="1" />
+							{{ end }}
 						</div>
 						<span class="fs-s" id="end-display">00:30</span>
 					</div>
@@ -63,18 +68,18 @@
 		<section class="dashboard flow-1 margin-top-4">
 			{{ if eq .Status "unauthorized"}}
 				{{ if ne .StatusMessage "" }}
-					<p>{{ .StatusMessage }}</p>
+					<p class="max-width-40">{{ .StatusMessage }}</p>
 				{{ end }}
 				<button id="connect-spotify">Connect to Spotify</button>
 			{{ end }}
 
 			{{ if eq .Status "idle" }}
-				<p>To view the dashboard, start playing a Spotify song on any of your devices and refresh the page.</p>
+				<p class="max-width-40">To view the dashboard, start playing a Spotify song on any of your devices and refresh the page.</p>
 			{{ end }}
 		</section>
 	{{ end }}
 
-	<div id="form-status"></div>
+	<div id="form-status" class="hidden"></div>
 </main>
 
 <script src="/web/static/js/loop.js"></script>

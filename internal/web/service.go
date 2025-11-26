@@ -26,6 +26,10 @@ type PageState struct {
 	StatusDescription string
 	StatusMessage string
 	Playback *spotify.PlaybackState
+	Loop struct {
+		Start int
+		End int
+	}
 }
 
 func NewService(authService *spotifyauth.Service, spotifyService *spotify.Service) *Service {
@@ -49,6 +53,7 @@ func (s *Service) GetState(r *http.Request) PageState {
 		return PageState{
 			Status: StatusUnauthorized,
 			StatusDescription: "Not connected",
+			StatusMessage: "Please connect to Spotify to continue.",
 		}
 	}
 
@@ -61,10 +66,19 @@ func (s *Service) GetState(r *http.Request) PageState {
 	}
 
 	if s.spotifyService.IsLoopActive() {
+		start, end := s.spotifyService.GetLoopRange()
+
 		return PageState{
 			Status: StatusLooping,
 			StatusDescription: "Loop active",
 			Playback: playback,
+			Loop: struct{
+				Start int;
+				End int
+			}{
+				Start: start,
+				End: end,
+			},
 		}
 	}
 

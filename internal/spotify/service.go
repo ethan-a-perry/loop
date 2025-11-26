@@ -12,6 +12,8 @@ type Service struct {
 	auth *spotifyauth.Service
 	isLoopActive atomic.Bool
 	stop chan struct{}
+	loopStart int
+	loopEnd int
 }
 
 func NewService(auth *spotifyauth.Service) *Service {
@@ -44,6 +46,8 @@ func (s *Service) StartLoop(start, end int) error {
 	}
 
 	s.setLoopActive()
+	s.loopStart = start
+	s.loopEnd = end
 	s.stop = make(chan struct{})
 
 	go s.runLoop(start, end)
@@ -65,6 +69,10 @@ func (s *Service) StopLoop() error {
 
 func (s *Service) IsLoopActive() bool {
 	return s.isLoopActive.Load()
+}
+
+func (s *Service) GetLoopRange() (int, int) {
+	return s.loopStart, s.loopEnd
 }
 
 func (s *Service) CheckPlaybackState(accessToken, currentTrackID string) bool {
